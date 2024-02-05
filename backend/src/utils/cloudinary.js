@@ -10,11 +10,11 @@ cloudinary.config({
 
 
 const uploadOnCloudinary = async (localFilePath) => {
-    if(!localFilePath) return null;
-
     try {
+        if(!localFilePath) return null;
+
         const response = await cloudinary.uploader.upload(localFilePath, {
-            resource_type: auto,
+            resource_type: "auto",
         });
     
         // As file is uploaded successfully, we have to remove temprary saved file
