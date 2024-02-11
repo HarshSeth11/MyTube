@@ -4,21 +4,21 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import jwt from "jsonwebtoken";
-import mongoose from "mongoose";
 
 const generateAccessAndRefreshToken = async (id) => {
     try {
-        const user = User.findById(id);
+        const user = await User.findById(id);
         const accessToken = await user.generateAccessToken();
         const refreshToken = await user.generateRefreshToken();
-
+        
         user.refreshToken = refreshToken;
-
+        
+        
         await user.save({ validateBeforeSave: false });
-
+        
         return { accessToken, refreshToken };
     } catch (error) {
-        throw new ApiError(500, "Error while generating authentication toekns");
+        throw new ApiError(500, "Error while generating authentication tokens ", error);
     }
 };
 
@@ -104,30 +104,32 @@ const loginUser = asyncHandler(async (req, res) => {
 
     const { username, email, password } = req.body;
 
+
     if (!username && !email) {
         throw new ApiError(400, "Username or email is required");
     }
 
-    const user = User.findOne({
+    const user = await User.findOne({
         $or: [{ username }, { email }],
     });
 
     if (!user) throw new ApiError(400, "User doesn't exist");
 
-    const isPasswordCorrect = user.isPasswordCorrect(password);
+    const isPasswordCorrect = await user.isPasswordCorrect(password);
 
     if (!isPasswordCorrect) {
-        throw ApiError(400, "Password is incorrect!!");
+        throw new ApiError(400, "Password is incorrect!!");
     }
 
-    const { accessToken, refreshToken } = generateAccessAndRefreshToken(
+    const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
         user._id
     );
 
-    const loginUser = User.findById(user._id).select(
+    const loginUser = await User.findById(user._id).select(
         " -password -refreshToken "
     );
 
+    
     const options = {
         httpOnly: true,
         secure: true,
@@ -187,9 +189,10 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
     try {
         const decodedToken = jwt.verify(
-            cookieRefreshToken,
-            process.env.REFRESH_TOKEN_SECRET
+            `${cookieRefreshToken}`,
+            `${process.env.REFRESH_TOKEN_SECRET}`
         );
+
 
         const user = await User.findById(decodedToken._id);
 
@@ -197,7 +200,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
             throw new ApiError(401, "Refresh Token is not valid");
         }
 
-        const { accessToken, refreshToken } = generateAccessAndRefreshToken(
+        const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
             user._id
         );
 
@@ -230,7 +233,7 @@ const changePassword = asyncHandler(async (req, res) => {
 
     const { oldPassword, newPassword } = req.body;
 
-    const user = await User.findById(req.user._id);
+    const user = await User.findById(req.user?._id);
     const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
 
     if (!isPasswordCorrect)
@@ -250,7 +253,7 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 
     return res
         .status(200)
-        .json(new ApiResponse(200, "User Fetched Successfully", req.body));
+        .json(new ApiResponse(200, "User Fetched Successfully", req.user));
 });
 
 const updateAccountDetails = asyncHandler(async (req, res) => {
@@ -261,13 +264,13 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
 
     const { username, fullname, email } = req.body;
 
-    const user = User.findById(req.user._id);
+    const user = await User.findById(req.user._id);
 
     if (username) {
         if (username == user.username)
             throw new ApiError(400, "This is same as previous username");
 
-        const userAlreadyExist = await User.find({ username });
+        const userAlreadyExist = await User.findOne({ username });
 
         if (userAlreadyExist)
             throw new ApiError(400, "This username is not available");
@@ -289,17 +292,14 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
 
     if (fullname) user.fullname = fullname;
 
-    const updatedUser = await user
-        .save({ validateBeforeSave: false })
-        .select(" -password -refreshToken ");
+    await user.save({ validateBeforeSave: false })
 
     return res
         .status(200)
         .json(
             new ApiResponse(
                 200,
-                "Information is updated Successfully",
-                updatedUser
+                "Information is updated Successfully"
             )
         );
 });
@@ -317,7 +317,7 @@ const updateAvatar = asyncHandler(async (req, res) => {
 
     const avatar = await uploadOnCloudinary(avatarLocalPath);
 
-    const user = User.findByIdAndUpdate(
+    const user = await User.findByIdAndUpdate(
         req.user._id,
         {
             $set: {
@@ -347,7 +347,7 @@ const updateCoverImage = asyncHandler(async (req, res) => {
 
     const CoverImage = await uploadOnCloudinary(CoverImageLocalPath);
 
-    const user = User.findByIdAndUpdate(
+    const user = await User.findByIdAndUpdate(
         req.user._id,
         {
             $set: {
@@ -365,7 +365,8 @@ const updateCoverImage = asyncHandler(async (req, res) => {
 });
 
 const getUserChannelProfile = asyncHandler(async (req, res) => {
-    const username = req.params;
+    const { username } = req.params;
+    console.log(username);
 
     if (!username) {
         throw new ApiError(400, "Username is required.");
@@ -437,7 +438,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         );
 });
 
-const getWatchHistory = asyncHandler(async () => {
+const getWatchHistory = asyncHandler(async (req, res) => {
     const user = await User.aggregate([
         {
             $lookup: {

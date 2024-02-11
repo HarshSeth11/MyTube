@@ -28,7 +28,7 @@ router.post('/refresh-token', refreshAccessToken);
 
 router.post('/change-password', verifyJWT, changePassword);
 
-router.post('current-user', verifyJWT, getCurrentUser);
+router.get('/current-user', verifyJWT, getCurrentUser);
 
 router.patch('/update-account', verifyJWT, updateAccountDetails);
 
@@ -38,6 +38,6 @@ router.patch('/cover-image', verifyJWT, upload.single("coverImage") ,updateCover
 
 router.get('/channel/:username', verifyJWT, getUserChannelProfile);
 
-router.get('watch-history', verifyJWT, getWatchHistory);
+router.get('/watch-history', verifyJWT, getWatchHistory);
 
 export default router 
