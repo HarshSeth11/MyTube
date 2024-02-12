@@ -1,5 +1,6 @@
 import mongoose, { Schema } from "mongoose"
 import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2"
+import { deleteFromCloudinary } from "../utils/cloudinary" 
 
 
 const videoSchema = new Schema(
@@ -40,7 +41,15 @@ const videoSchema = new Schema(
     {
         timestamps: true,
     }
-)
+);
+
+videoSchema.pre("save", async function(next) {
+    if(!this.isModified("thumbnail") || this.thumbnail === undefined) return next();
+
+    deleteFromCloudinary(this.thumbnail);
+    console.log("Previous thumbnail is deteled.");
+    next();
+})
 
 videoSchema.plugin(mongooseAggregatePaginate)
 

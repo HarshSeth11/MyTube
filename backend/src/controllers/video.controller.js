@@ -157,11 +157,11 @@ const deleteVideo = asyncHandler(async (req, res) => {
 const togglePublishStatus = asyncHandler(async (req, res) => {
     const { videoId } = req.params
 
-    const video = Video.findById(videoId);
+    const video = await Video.findById(videoId);
 
     video.isPublic = !video.isPublic
 
-    video.save({ validateBeforeSave : false });
+    await video.save({ validateBeforeSave : false });
 
     return res
     .status(200)
