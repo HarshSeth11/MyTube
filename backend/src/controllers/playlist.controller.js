@@ -119,17 +119,105 @@ const getPlaylistById = asyncHandler(async (req, res) => {
 
 const addVideoToPlaylist = asyncHandler(async (req, res) => {
     const {playlistId, videoId} = req.params
+
+    if(!playlistId || !videoId) {
+        throw new ApiError(400, "Both playlist and video Id is required.")
+    }
+
+    const updatedPlaylist = await Playlist.aggregate([
+        {
+            $match: {
+                _id: mongoose.Types.ObjectId(playlistId)
+            }
+        },
+        {
+            $set: {
+                "videos" : {
+                    $concatArrays: ["$videos", mongoose.Types.ObjectId(videoId)]
+                }
+            }
+        },
+        {
+            $lookup: {
+                from: "videos",
+                localField: "videos",
+                foreignField: "_id",
+                as: "videos",
+                createdAt: 1,
+                updatedAt: 1
+            }
+        },
+        {
+            $project: {
+                name: 1,
+                description: 1,
+                videos: 1,
+                owner: 1
+            }
+        }
+    ]);
+
+    if(!updatedPlaylist) {
+        throw new ApiError(500, "Some problem while adding video in the playlist")
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200, "Video is successfully added to the playlist", updatedPlaylist)
+    );
 })
 
 const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
     const {playlistId, videoId} = req.params
     // TODO: remove video from playlist
 
+    const updatedPlaylist = await Playlist.aggregate([
+        {
+            $match: {
+                _id: mongoose.Types.ObjectId(playlistId)
+            }
+        },
+        {
+            $set: {
+                videos: {
+                    $filter: {
+                        input: "$videos",
+                        name: "video",
+                        cond: {
+                            $ne: ["$$video", mongoose.Types.ObjectId(videoId)]
+                        }
+                    }
+                }
+            }
+        },
+        {
+            $project: {
+                name: 1,
+                description: 1,
+                videos: 1,
+                owner: 1,
+                createdAt: 1,
+                updatedAt: 1
+            }
+        }
+    ]);
+
+    if(!updatedPlaylist) {
+        throw new ApiError(500, "Some problem while removing video from the playlist")
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200, "Video is successfully Removed from the playlist", updatedPlaylist)
+    );
 })
 
 const deletePlaylist = asyncHandler(async (req, res) => {
     const {playlistId} = req.params
     // TODO: delete playlist
+    
 })
 
 const updatePlaylist = asyncHandler(async (req, res) => {
