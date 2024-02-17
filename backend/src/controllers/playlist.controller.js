@@ -217,13 +217,53 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
 const deletePlaylist = asyncHandler(async (req, res) => {
     const {playlistId} = req.params
     // TODO: delete playlist
-    
+    if(!isValidObjectId(playlistId)) {
+        throw new ApiError(400, "Playlist Id is not valid");
+    }
+
+    const playlist = await Playlist.findByIdAndDelete(playlistId);
+
+    if(!playlist) {
+        throw new ApiError(400, "There is no playlist");
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200, "Playlist is deleted")
+    );
 })
 
 const updatePlaylist = asyncHandler(async (req, res) => {
     const {playlistId} = req.params
     const {name, description} = req.body
     //TODO: update playlist
+
+    const updates = {}
+    if(name.trim() !== "") updates["name"] = name;
+    if(description.trim() !== "") updates["description"] = description;
+     
+
+    const updatedPlaylist = await Playlist.findOneAndUpdate(
+        {
+            _id: playlistId,
+            owner: req.user._id
+        }, 
+        updates,
+        {
+            new: true
+        }
+    );
+
+    if(!updatePlaylist) {
+        throw new ApiError(400, "No playlist Found");
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200, "Playlist is updated")
+    );    
 })
 
 export {
