@@ -45,6 +45,10 @@ const updateTweet = asyncHandler(async (req, res) => {
     //TODO: update tweet
     const { tweetId } = req.params;
     const { content } = req.body;
+
+    if(!isValidObjectId(tweetId)) {
+        throw new ApiError(400, "Tweet Id is not valid")
+    }
     
     const updatedTweet = await Tweet.findByIdAndUpdate(mongoose.Types.ObjectId(tweetId), {
         content
@@ -64,6 +68,10 @@ const updateTweet = asyncHandler(async (req, res) => {
 const deleteTweet = asyncHandler(async (req, res) => {
     //TODO: delete tweet
     const { tweetId } = req.params;
+
+    if(!isValidObjectId(tweetId)) {
+        throw new ApiError(400, "Tweet Id is not valid")
+    }
 
     const deletedTweet = await Tweet.findByIdAndDelete(tweetId);
 
