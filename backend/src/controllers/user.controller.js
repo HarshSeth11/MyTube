@@ -211,8 +211,8 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
         return res
             .status(200)
-            .cookie("refreshToken", refreshToken)
-            .cookie("accessToken", accessToken)
+            .cookie("refreshToken", refreshToken, options)
+            .cookie("accessToken", accessToken, options)
             .json(
                 new ApiResponse(200, "Tokens are generated", {
                     accessToken,
