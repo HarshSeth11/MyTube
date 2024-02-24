@@ -264,42 +264,27 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
 
     const { username, fullname, email } = req.body;
 
-    const user = await User.findById(req.user._id);
+    updatableObjects = {};
 
-    if (username) {
-        if (username == user.username)
-            throw new ApiError(400, "This is same as previous username");
-
-        const userAlreadyExist = await User.findOne({ username });
-
-        if (userAlreadyExist)
-            throw new ApiError(400, "This username is not available");
-
-        user.username = username;
+    if(username.time() !== "") {
+        updatableObjects["username"] = username;
+    }
+    if(name.time() !== "") {
+        updatableObjects["fullname"] = fullname;
+    }
+    if(email.time() !== "") {
+        updatableObjects["email"] = email;
     }
 
-    if (email) {
-        if (email == user.email)
-            throw new ApiError(400, "This is same as previous username");
-
-        const userAlreadyExist = await User.find({ email });
-
-        if (userAlreadyExist)
-            throw new ApiError(400, "This email already exists");
-
-        user.email = email;
-    }
-
-    if (fullname) user.fullname = fullname;
-
-    await user.save({ validateBeforeSave: false })
+    const user = await User.findByIdAndUpdate(req.user._id, updatableObjects, {new: true});
 
     return res
         .status(200)
         .json(
             new ApiResponse(
                 200,
-                "Information is updated Successfully"
+                "Information is updated Successfully",
+                user
             )
         );
 });
